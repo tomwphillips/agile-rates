@@ -2,23 +2,45 @@ from datetime import datetime, timezone
 
 import responses
 
-from agile import (API_BASE_URL, Product, Tariff, UnitRate, get_tariffs,
-                   get_unit_rates, list_products)
+from agile import (
+    API_BASE_URL,
+    Product,
+    Tariff,
+    UnitRate,
+    get_tariffs,
+    get_unit_rates,
+    list_products,
+)
 
 
 @responses.activate()
 def test_list_products():
+    url = API_BASE_URL + "/products/"
+
     responses.get(
-        API_BASE_URL + "/products/",
+        url,
         json={
+            "next": url + "?page=2",
             "results": [
-                {"code": "AGILE-1", "brand": "OCTOPUS_ENERGY", "direction": "IMPORT"},
                 {"code": "AGILE-2", "brand": "STARFISH_ENERGY"},
                 {"code": "STIFF-1", "brand": "OCTOPUS_ENERGY"},
-            ]
+            ],
         },
+        match=[responses.matchers.query_param_matcher({})],
     )
-    products = list_products()
+
+    responses.get(
+        url,
+        json={
+            "next": None,
+            "results": [
+                {"code": "AGILE-1", "brand": "OCTOPUS_ENERGY", "direction": "IMPORT"},
+            ],
+        },
+        match=[responses.matchers.query_param_matcher({"page": 2})],
+    )
+
+    products = list(list_products())
     assert products == [Product(code="AGILE-1")]
 
 

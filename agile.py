@@ -35,21 +35,26 @@ class UnitRate:
 
 
 def list_products():
-    response = requests.get(API_BASE_URL + "/products/")
-    decoded_response = response.json()
-    if decoded_response.get("next"):
-        raise NotImplementedError("paginated response")
+    url = API_BASE_URL + "/products/"
+    while True:
+        response = requests.get(url)
+        decoded_response = response.json()
 
-    return [
-        Product(**product)
-        for product in (
-            jq.compile(
-                '.results [] | select((.code | startswith("AGILE")) and .brand == "OCTOPUS_ENERGY" and .direction == "IMPORT") | {code: .code}'
+        yield from [
+            Product(**product)
+            for product in (
+                jq.compile(
+                    '.results [] | select((.code | startswith("AGILE")) and .brand == "OCTOPUS_ENERGY" and .direction == "IMPORT") | {code: .code}'
+                )
+                .input(decoded_response)
+                .all()
             )
-            .input(decoded_response)
-            .all()
-        )
-    ]
+        ]
+
+        if decoded_response.get("next"):
+            url = decoded_response["next"]
+        else:
+            break
 
 
 def get_tariffs(product):
