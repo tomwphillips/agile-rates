@@ -1,4 +1,5 @@
-from datetime import datetime, timezone
+from datetime import datetime, date, timezone, timedelta
+import pytest
 
 import responses
 
@@ -69,55 +70,83 @@ def test_get_unit_rates():
         API_BASE_URL
         + "/products/PRODUCT-CODE/electricity-tariffs/TARIFF-CODE/standard-unit-rates/"
     )
+
     responses.get(
         url,
         json={
-            "count": 1,
-            "next": url + "?page=2",
+            "count": 2,
+            "next": None,
             "previous": None,
             "results": [
                 {
                     "value_exc_vat": 7.78,
                     "value_inc_vat": 8.169,
-                    "valid_from": "2023-04-10T21:30:00Z",
-                    "valid_to": "2023-04-10T22:00:00Z",
+                    "valid_from": "2023-04-10T00:00:00Z",
+                    "valid_to": "2023-04-10T00:30:00Z",
+                },
+                {
+                    "value_exc_vat": 15.84,
+                    "value_inc_vat": 16.632,
+                    "valid_from": "2023-04-10T23:30:00Z",
+                    "valid_to": "2023-04-11T00:00:00Z",
                 },
             ],
         },
+        match=[
+            responses.matchers.query_param_matcher(
+                {
+                    "period_from": "2023-04-10T00:00:00Z",
+                    "period_to": "2023-04-11T00:00:00Z",
+                }
+            )
+        ],
+    )
+
+    unit_rates = list(
+        get_unit_rates(
+            Tariff(code="TARIFF-CODE", product_code="PRODUCT-CODE"),
+            date_from=date(2023, 4, 10),
+            date_to=date(2023, 4, 11),
+        )
+    )
+    assert unit_rates == [
+        UnitRate(
+            valid_from=datetime(2023, 4, 10, 0, 0, tzinfo=timezone.utc),
+            valid_to=datetime(2023, 4, 10, 0, 30, tzinfo=timezone.utc),
+            value_exc_vat=7.78,
+            value_inc_vat=8.169,
+        ),
+        UnitRate(
+            valid_from=datetime(2023, 4, 10, 23, 30, tzinfo=timezone.utc),
+            valid_to=datetime(2023, 4, 11, 0, 0, tzinfo=timezone.utc),
+            value_exc_vat=15.84,
+            value_inc_vat=16.632,
+        ),
+    ]
+
+
+@responses.activate()
+def test_get_unit_rates_fails_when_paginated():
+    url = (
+        API_BASE_URL
+        + "/products/PRODUCT-CODE/electricity-tariffs/TARIFF-CODE/standard-unit-rates/"
     )
 
     responses.get(
         url,
         json={
-            "count": 1,
-            "next": None,
+            "count": 2,
+            "next": url + "?page=2",
             "previous": None,
-            "results": [
-                {
-                    "value_exc_vat": 15.84,
-                    "value_inc_vat": 16.632,
-                    "valid_from": "2023-04-10T21:00:00Z",
-                    "valid_to": "2023-04-10T21:30:00Z",
-                }
-            ],
+            "results": [],
         },
-        match=[responses.matchers.query_param_matcher({"page": 2})],
     )
 
-    unit_rates = list(
-        get_unit_rates(Tariff(code="TARIFF-CODE", product_code="PRODUCT-CODE"))
-    )
-    assert unit_rates == [
-        UnitRate(
-            valid_from=datetime(2023, 4, 10, 21, 30, tzinfo=timezone.utc),
-            valid_to=datetime(2023, 4, 10, 22, 0, tzinfo=timezone.utc),
-            value_exc_vat=7.78,
-            value_inc_vat=8.169,
-        ),
-        UnitRate(
-            valid_from=datetime(2023, 4, 10, 21, 0, tzinfo=timezone.utc),
-            valid_to=datetime(2023, 4, 10, 21, 30, tzinfo=timezone.utc),
-            value_exc_vat=15.84,
-            value_inc_vat=16.632,
-        ),
-    ]
+    with pytest.raises(NotImplementedError):
+        next(
+            get_unit_rates(
+                Tariff(code="TARIFF-CODE", product_code="PRODUCT-CODE"),
+                date_from=date.today(),
+                date_to=date.today() + timedelta(days=1),
+            )
+        )

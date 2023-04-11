@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime
+import datetime as dt
 
 import jq
 import requests
@@ -20,15 +20,15 @@ class Tariff:
 
 @dataclass
 class UnitRate:
-    valid_from: datetime
-    valid_to: datetime
+    valid_from: dt.datetime
+    valid_to: dt.datetime
     value_exc_vat: float
     value_inc_vat: float
 
     def from_decoded_json(**kwargs):
         return UnitRate(
-            valid_from=datetime.fromisoformat(kwargs["valid_from"]),
-            valid_to=datetime.fromisoformat(kwargs["valid_to"]),
+            valid_from=dt.datetime.fromisoformat(kwargs["valid_from"]),
+            valid_to=dt.datetime.fromisoformat(kwargs["valid_to"]),
             value_exc_vat=kwargs["value_exc_vat"],
             value_inc_vat=kwargs["value_inc_vat"],
         )
@@ -72,31 +72,38 @@ def get_tariffs(product):
     ]
 
 
-def get_unit_rates(tariff):
+def get_unit_rates(tariff, date_from, date_to):
     url = (
         API_BASE_URL
         + f"/products/{tariff.product_code}/electricity-tariffs/{tariff.code}/standard-unit-rates/"
     )
 
-    while True:
-        response = requests.get(url)
-        decoded_response = response.json()
+    response = requests.get(
+        url,
+        params={
+            "period_from": dt.datetime.combine(
+                date_from, dt.time(), dt.timezone.utc
+            ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "period_to": dt.datetime.combine(
+                date_to, dt.time(), dt.timezone.utc
+            ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        },
+    )
+    decoded_response = response.json()
 
-        yield from [
-            UnitRate.from_decoded_json(**unit_rate)
-            for unit_rate in (
-                jq.compile(
-                    ".results[] | {valid_from: .valid_from, valid_to: .valid_to, value_exc_vat: .value_exc_vat, value_inc_vat: .value_inc_vat}"
-                )
-                .input(decoded_response)
-                .all()
+    if decoded_response.get("next"):
+        raise NotImplementedError("Pagination not implemented")
+
+    yield from [
+        UnitRate.from_decoded_json(**unit_rate)
+        for unit_rate in (
+            jq.compile(
+                ".results[] | {valid_from: .valid_from, valid_to: .valid_to, value_exc_vat: .value_exc_vat, value_inc_vat: .value_inc_vat}"
             )
-        ]
-
-        if decoded_response.get("next"):
-            url = decoded_response["next"]
-        else:
-            break
+            .input(decoded_response)
+            .all()
+        )
+    ]
 
 
 if __name__ == "__main__":
