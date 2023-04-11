@@ -114,4 +114,13 @@ if __name__ == "__main__":
         tariffs.extend(get_tariffs(product))
 
     for tariff in tariffs:
-        print(tariff)
+        print("~~~~~~~", tariff, "~~~~~~~")
+
+        unit_rates = get_unit_rates(
+            tariff,
+            dt.date.today() + dt.timedelta(days=1),
+            dt.date.today() + dt.timedelta(days=2),
+        )
+
+        for unit_rate in unit_rates:
+            print(unit_rate)
