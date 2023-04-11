@@ -73,24 +73,30 @@ def get_tariffs(product):
 
 
 def get_unit_rates(tariff):
-    response = requests.get(
+    url = (
         API_BASE_URL
         + f"/products/{tariff.product_code}/electricity-tariffs/{tariff.code}/standard-unit-rates/"
     )
-    decoded_response = response.json()
-    if decoded_response.get("next"):
-        raise NotImplementedError("paginated response")
 
-    return [
-        UnitRate.from_decoded_json(**unit_rate)
-        for unit_rate in (
-            jq.compile(
-                ".results[] | {valid_from: .valid_from, valid_to: .valid_to, value_exc_vat: .value_exc_vat, value_inc_vat: .value_inc_vat}"
+    while True:
+        response = requests.get(url)
+        decoded_response = response.json()
+
+        yield from [
+            UnitRate.from_decoded_json(**unit_rate)
+            for unit_rate in (
+                jq.compile(
+                    ".results[] | {valid_from: .valid_from, valid_to: .valid_to, value_exc_vat: .value_exc_vat, value_inc_vat: .value_inc_vat}"
+                )
+                .input(decoded_response)
+                .all()
             )
-            .input(decoded_response)
-            .all()
-        )
-    ]
+        ]
+
+        if decoded_response.get("next"):
+            url = decoded_response["next"]
+        else:
+            break
 
 
 if __name__ == "__main__":

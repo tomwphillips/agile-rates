@@ -65,12 +65,15 @@ def test_get_tariffs():
 
 @responses.activate()
 def test_get_unit_rates():
-    responses.get(
+    url = (
         API_BASE_URL
-        + "/products/PRODUCT-CODE/electricity-tariffs/TARIFF-CODE/standard-unit-rates/",
+        + "/products/PRODUCT-CODE/electricity-tariffs/TARIFF-CODE/standard-unit-rates/"
+    )
+    responses.get(
+        url,
         json={
-            "count": 7724,
-            "next": None,
+            "count": 1,
+            "next": url + "?page=2",
             "previous": None,
             "results": [
                 {
@@ -79,16 +82,31 @@ def test_get_unit_rates():
                     "valid_from": "2023-04-10T21:30:00Z",
                     "valid_to": "2023-04-10T22:00:00Z",
                 },
+            ],
+        },
+    )
+
+    responses.get(
+        url,
+        json={
+            "count": 1,
+            "next": None,
+            "previous": None,
+            "results": [
                 {
                     "value_exc_vat": 15.84,
                     "value_inc_vat": 16.632,
                     "valid_from": "2023-04-10T21:00:00Z",
                     "valid_to": "2023-04-10T21:30:00Z",
-                },
+                }
             ],
         },
+        match=[responses.matchers.query_param_matcher({"page": 2})],
     )
-    unit_rates = get_unit_rates(Tariff(code="TARIFF-CODE", product_code="PRODUCT-CODE"))
+
+    unit_rates = list(
+        get_unit_rates(Tariff(code="TARIFF-CODE", product_code="PRODUCT-CODE"))
+    )
     assert unit_rates == [
         UnitRate(
             valid_from=datetime(2023, 4, 10, 21, 30, tzinfo=timezone.utc),
