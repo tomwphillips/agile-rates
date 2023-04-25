@@ -47,19 +47,19 @@ def mock_api():
         )
 
         mock_api.get(
-            API_BASE_URL + "/products/PRODUCT-1",
+            API_BASE_URL + "/products/AGILE-1",
             json={
                 "code": "PRODUCT-1",
                 "single_register_electricity_tariffs": {
-                    "_A": {"direct_debit_monthly": {"code": "A-1"}},
-                    "_B": {"direct_debit_monthly": {"code": "B-1"}},
+                    "_A": {"direct_debit_monthly": {"code": "AGILE-1-A"}},
+                    "_B": {"direct_debit_monthly": {"code": "AGILE-1-B"}},
                 },
             },
         )
 
         mock_api.get(
             API_BASE_URL
-            + "/products/PRODUCT-CODE/electricity-tariffs/TARIFF-CODE/standard-unit-rates/",
+            + "/products/AGILE-1/electricity-tariffs/AGILE-1-A/standard-unit-rates/",
             json={
                 "count": 2,
                 "next": None,
@@ -98,17 +98,17 @@ def test_list_products(mock_api):
 
 
 def test_get_tariffs(mock_api):
-    tariffs = get_tariffs(Product(code="PRODUCT-1"))
+    tariffs = get_tariffs(Product(code="AGILE-1"))
     assert tariffs == [
-        Tariff(code="A-1", product_code="PRODUCT-1"),
-        Tariff(code="B-1", product_code="PRODUCT-1"),
+        Tariff(code="AGILE-1-A", product_code="AGILE-1"),
+        Tariff(code="AGILE-1-B", product_code="AGILE-1"),
     ]
 
 
 def test_get_unit_rates(mock_api):
     unit_rates = list(
         get_unit_rates(
-            Tariff(code="TARIFF-CODE", product_code="PRODUCT-CODE"),
+            Tariff(code="AGILE-1-A", product_code="AGILE-1"),
             date_from=date(2023, 4, 10),
             date_to=date(2023, 4, 11),
         )
@@ -133,7 +133,7 @@ def test_get_unit_rates(mock_api):
 def test_get_unit_rates_fails_when_paginated():
     url = (
         API_BASE_URL
-        + "/products/PRODUCT-CODE/electricity-tariffs/TARIFF-CODE/standard-unit-rates/"
+        + "/products/AGILE-1/electricity-tariffs/AGILE-1-A/standard-unit-rates/"
     )
 
     responses.get(
@@ -149,7 +149,7 @@ def test_get_unit_rates_fails_when_paginated():
     with pytest.raises(NotImplementedError):
         next(
             get_unit_rates(
-                Tariff(code="TARIFF-CODE", product_code="PRODUCT-CODE"),
+                Tariff(code="AGILE-1-A", product_code="AGILE-1"),
                 date_from=date.today(),
                 date_to=date.today() + timedelta(days=1),
             )
