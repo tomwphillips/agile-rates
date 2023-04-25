@@ -14,49 +14,90 @@ from agile import (
 )
 
 
-@responses.activate()
-def test_list_products():
-    url = API_BASE_URL + "/products/"
+@pytest.fixture
+def mock_api():
+    with responses.RequestsMock(assert_all_requests_are_fired=False) as mock_api:
+        products_url = API_BASE_URL + "/products/"
 
-    responses.get(
-        url,
-        json={
-            "next": url + "?page=2",
-            "results": [
-                {"code": "AGILE-2", "brand": "STARFISH_ENERGY"},
-                {"code": "STIFF-1", "brand": "OCTOPUS_ENERGY"},
+        mock_api.get(
+            products_url,
+            json={
+                "next": products_url + "?page=2",
+                "results": [
+                    {"code": "AGILE-2", "brand": "STARFISH_ENERGY"},
+                    {"code": "STIFF-1", "brand": "OCTOPUS_ENERGY"},
+                ],
+            },
+            match=[responses.matchers.query_param_matcher({})],
+        )
+
+        mock_api.get(
+            products_url,
+            json={
+                "next": None,
+                "results": [
+                    {
+                        "code": "AGILE-1",
+                        "brand": "OCTOPUS_ENERGY",
+                        "direction": "IMPORT",
+                    },
+                ],
+            },
+            match=[responses.matchers.query_param_matcher({"page": 2})],
+        )
+
+        mock_api.get(
+            API_BASE_URL + "/products/PRODUCT-1",
+            json={
+                "code": "PRODUCT-1",
+                "single_register_electricity_tariffs": {
+                    "_A": {"direct_debit_monthly": {"code": "A-1"}},
+                    "_B": {"direct_debit_monthly": {"code": "B-1"}},
+                },
+            },
+        )
+
+        mock_api.get(
+            API_BASE_URL
+            + "/products/PRODUCT-CODE/electricity-tariffs/TARIFF-CODE/standard-unit-rates/",
+            json={
+                "count": 2,
+                "next": None,
+                "previous": None,
+                "results": [
+                    {
+                        "value_exc_vat": 7.78,
+                        "value_inc_vat": 8.169,
+                        "valid_from": "2023-04-10T00:00:00Z",
+                        "valid_to": "2023-04-10T00:30:00Z",
+                    },
+                    {
+                        "value_exc_vat": 15.84,
+                        "value_inc_vat": 16.632,
+                        "valid_from": "2023-04-10T23:30:00Z",
+                        "valid_to": "2023-04-11T00:00:00Z",
+                    },
+                ],
+            },
+            match=[
+                responses.matchers.query_param_matcher(
+                    {
+                        "period_from": "2023-04-10T00:00:00Z",
+                        "period_to": "2023-04-11T00:00:00Z",
+                    }
+                )
             ],
-        },
-        match=[responses.matchers.query_param_matcher({})],
-    )
+        )
 
-    responses.get(
-        url,
-        json={
-            "next": None,
-            "results": [
-                {"code": "AGILE-1", "brand": "OCTOPUS_ENERGY", "direction": "IMPORT"},
-            ],
-        },
-        match=[responses.matchers.query_param_matcher({"page": 2})],
-    )
+        yield mock_api
 
+
+def test_list_products(mock_api):
     products = list(list_products())
     assert products == [Product(code="AGILE-1")]
 
 
-@responses.activate()
-def test_get_tariffs():
-    responses.get(
-        API_BASE_URL + "/products/PRODUCT-1",
-        json={
-            "code": "PRODUCT-1",
-            "single_register_electricity_tariffs": {
-                "_A": {"direct_debit_monthly": {"code": "A-1"}},
-                "_B": {"direct_debit_monthly": {"code": "B-1"}},
-            },
-        },
-    )
+def test_get_tariffs(mock_api):
     tariffs = get_tariffs(Product(code="PRODUCT-1"))
     assert tariffs == [
         Tariff(code="A-1", product_code="PRODUCT-1"),
@@ -64,44 +105,7 @@ def test_get_tariffs():
     ]
 
 
-@responses.activate()
-def test_get_unit_rates():
-    url = (
-        API_BASE_URL
-        + "/products/PRODUCT-CODE/electricity-tariffs/TARIFF-CODE/standard-unit-rates/"
-    )
-
-    responses.get(
-        url,
-        json={
-            "count": 2,
-            "next": None,
-            "previous": None,
-            "results": [
-                {
-                    "value_exc_vat": 7.78,
-                    "value_inc_vat": 8.169,
-                    "valid_from": "2023-04-10T00:00:00Z",
-                    "valid_to": "2023-04-10T00:30:00Z",
-                },
-                {
-                    "value_exc_vat": 15.84,
-                    "value_inc_vat": 16.632,
-                    "valid_from": "2023-04-10T23:30:00Z",
-                    "valid_to": "2023-04-11T00:00:00Z",
-                },
-            ],
-        },
-        match=[
-            responses.matchers.query_param_matcher(
-                {
-                    "period_from": "2023-04-10T00:00:00Z",
-                    "period_to": "2023-04-11T00:00:00Z",
-                }
-            )
-        ],
-    )
-
+def test_get_unit_rates(mock_api):
     unit_rates = list(
         get_unit_rates(
             Tariff(code="TARIFF-CODE", product_code="PRODUCT-CODE"),
