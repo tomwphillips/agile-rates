@@ -6,12 +6,15 @@ name = "pypi"
 [packages]
 jq = "*"
 requests = "*"
+sqlalchemy = "*"
 
 [dev-packages]
 black = "*"
 isort = "*"
 pytest = "*"
 responses = "*"
+ipython = "*"
+flake8 = "*"
 
 [requires]
 python_version = "3.11"

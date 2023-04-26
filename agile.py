@@ -1,29 +1,53 @@
-from dataclasses import dataclass
 import datetime as dt
+from typing import List
 
 import jq
 import requests
+from sqlalchemy import ForeignKey
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 API_BASE_URL = "https://api.octopus.energy/v1"
 
 
-@dataclass
-class Product:
-    code: str
+class Base(DeclarativeBase):
+    pass
 
 
-@dataclass
-class Tariff:
-    code: str
-    product_code: str
+class Product(Base):
+    __tablename__ = "products"
+
+    code: Mapped[str] = mapped_column(primary_key=True)
+    tariffs: Mapped[List["Tariff"]] = relationship()
+
+    def __eq__(self, other):
+        return self.code == other.code and self.tariffs == other.tariffs
+
+    def __repr__(self):
+        return f"Product(code={self.code!r}, tariffs={self.tariffs!r})"
 
 
-@dataclass
-class UnitRate:
-    valid_from: dt.datetime
-    valid_to: dt.datetime
-    value_exc_vat: float
-    value_inc_vat: float
+class Tariff(Base):
+    __tablename__ = "tariffs"
+
+    code: Mapped[str] = mapped_column(primary_key=True)
+    product_code: Mapped[str] = mapped_column(ForeignKey("products.code"))
+
+    def __eq__(self, other):
+        return self.code == other.code and self.product_code == other.product_code
+
+    def __repr__(self):
+        return f"Tariff(code={self.code!r}, product_code={self.product_code!r})"
+
+
+class UnitRate(Base):
+    __tablename__ = "unit_rates"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    tariff_code: Mapped[str] = mapped_column(ForeignKey("tariffs.code"))
+    valid_from: Mapped[dt.datetime]
+    valid_to: Mapped[dt.datetime]
+    value_exc_vat: Mapped[float]
+    value_inc_vat: Mapped[float]
 
     def from_decoded_json(**kwargs):
         return UnitRate(
@@ -31,6 +55,26 @@ class UnitRate:
             valid_to=dt.datetime.fromisoformat(kwargs["valid_to"]),
             value_exc_vat=kwargs["value_exc_vat"],
             value_inc_vat=kwargs["value_inc_vat"],
+        )
+
+    def __eq__(self, other):
+        return (
+            self.tariff_code == other.tariff_code
+            and self.valid_from == other.valid_from
+            and self.valid_to == other.valid_to
+            and self.value_exc_vat == other.value_exc_vat
+            and self.value_inc_vat == other.value_inc_vat
+        )
+
+    def __repr__(self):
+        return (
+            f"UnitRate("
+            f"tariff_code={self.tariff_code!r}, "
+            f"valid_from={self.valid_from!r}, "
+            f"valid_to={self.valid_to!r}, "
+            f"value_exc_vat={self.value_exc_vat!r}, "
+            f"value_inc_vat={self.value_inc_vat!r}"
+            f")"
         )
 
 

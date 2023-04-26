@@ -1,17 +1,10 @@
-from datetime import datetime, date, timezone, timedelta
-import pytest
+from datetime import date, datetime, timedelta, timezone
 
+import pytest
 import responses
 
-from agile import (
-    API_BASE_URL,
-    Product,
-    Tariff,
-    UnitRate,
-    get_tariffs,
-    get_unit_rates,
-    list_products,
-)
+from agile import (API_BASE_URL, Product, Tariff, UnitRate, get_tariffs,
+                   get_unit_rates, list_products)
 
 
 @pytest.fixture
