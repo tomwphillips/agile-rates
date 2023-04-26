@@ -3,8 +3,15 @@ from datetime import date, datetime, timedelta, timezone
 import pytest
 import responses
 
-from agile import (API_BASE_URL, Product, Tariff, UnitRate, get_tariffs,
-                   get_unit_rates, list_products)
+from agile import (
+    API_BASE_URL,
+    Product,
+    Tariff,
+    UnitRate,
+    get_tariffs,
+    get_unit_rates,
+    list_products,
+)
 
 
 @pytest.fixture
@@ -112,12 +119,14 @@ def test_get_unit_rates(mock_api):
             valid_to=datetime(2023, 4, 10, 0, 30, tzinfo=timezone.utc),
             value_exc_vat=7.78,
             value_inc_vat=8.169,
+            tariff_code="AGILE-1-A",
         ),
         UnitRate(
             valid_from=datetime(2023, 4, 10, 23, 30, tzinfo=timezone.utc),
             valid_to=datetime(2023, 4, 11, 0, 0, tzinfo=timezone.utc),
             value_exc_vat=15.84,
             value_inc_vat=16.632,
+            tariff_code="AGILE-1-A",
         ),
     ]
 

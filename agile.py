@@ -51,6 +51,7 @@ class UnitRate(Base):
 
     def from_decoded_json(**kwargs):
         return UnitRate(
+            tariff_code=kwargs["tariff_code"],
             valid_from=dt.datetime.fromisoformat(kwargs["valid_from"]),
             valid_to=dt.datetime.fromisoformat(kwargs["valid_to"]),
             value_exc_vat=kwargs["value_exc_vat"],
@@ -139,7 +140,7 @@ def get_unit_rates(tariff, date_from, date_to):
         raise NotImplementedError("Pagination not implemented")
 
     yield from [
-        UnitRate.from_decoded_json(**unit_rate)
+        UnitRate.from_decoded_json(**unit_rate, tariff_code=tariff.code)
         for unit_rate in (
             jq.compile(
                 ".results[] | {valid_from: .valid_from, valid_to: .valid_to, value_exc_vat: .value_exc_vat, value_inc_vat: .value_inc_vat}"
