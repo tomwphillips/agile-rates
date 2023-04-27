@@ -4,8 +4,17 @@ import datetime as dt
 
 import jq
 import requests
-from sqlalchemy import (Column, DateTime, Float, ForeignKey, MetaData, String,
-                        Table, UniqueConstraint, create_engine)
+from sqlalchemy import (
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    MetaData,
+    String,
+    Table,
+    UniqueConstraint,
+    create_engine,
+)
 from sqlalchemy.dialects.sqlite import insert
 
 API_BASE_URL = "https://api.octopus.energy/v1"

@@ -4,9 +4,21 @@ import pytest
 import responses
 from sqlalchemy import create_engine, func, select
 
-from agile import (API_BASE_URL, Product, Tariff, UnitRate, get_products,
-                   get_tariffs, get_unit_rates, metadata, parse_args,
-                   product_table, tariff_table, unit_rate_table, update_all)
+from agile import (
+    API_BASE_URL,
+    Product,
+    Tariff,
+    UnitRate,
+    get_products,
+    get_tariffs,
+    get_unit_rates,
+    metadata,
+    parse_args,
+    product_table,
+    tariff_table,
+    unit_rate_table,
+    update_all,
+)
 
 
 def mock_products_endpoint_factory(results, current_page=1, total_pages=1):
