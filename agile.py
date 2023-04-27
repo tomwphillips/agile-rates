@@ -79,22 +79,18 @@ class UnitRate(Base):
         )
 
 
-def list_products():
+def get_products():
+    processor = jq.compile(
+        '.results [] | select((.code | startswith("AGILE")) and .brand == "OCTOPUS_ENERGY" and .direction == "IMPORT") | {code: .code}'
+    )
+
     url = API_BASE_URL + "/products/"
     while True:
         response = requests.get(url)
         decoded_response = response.json()
 
-        yield from [
-            Product(**product)
-            for product in (
-                jq.compile(
-                    '.results [] | select((.code | startswith("AGILE")) and .brand == "OCTOPUS_ENERGY" and .direction == "IMPORT") | {code: .code}'
-                )
-                .input(decoded_response)
-                .all()
-            )
-        ]
+        for product in processor.input(decoded_response):
+            yield Product(**product)
 
         if decoded_response.get("next"):
             url = decoded_response["next"]
@@ -105,16 +101,11 @@ def list_products():
 def get_tariffs(product):
     response = requests.get(API_BASE_URL + "/products/" + product.code)
     decoded_response = response.json()
-    return [
-        Tariff(**tariff, product_code=product.code)
-        for tariff in (
-            jq.compile(
-                ".single_register_electricity_tariffs[] | {code: .direct_debit_monthly.code}"
-            )
-            .input(decoded_response)
-            .all()
-        )
-    ]
+    processor = jq.compile(
+        ".single_register_electricity_tariffs[] | {code: .direct_debit_monthly.code}"
+    )
+    for tariff in processor.input(decoded_response):
+        yield Tariff(**tariff, product_code=product.code)
 
 
 def get_unit_rates(tariff, date_from, date_to):
@@ -139,16 +130,12 @@ def get_unit_rates(tariff, date_from, date_to):
     if decoded_response.get("next"):
         raise NotImplementedError("Pagination not implemented")
 
-    yield from [
-        UnitRate.from_decoded_json(**unit_rate, tariff_code=tariff.code)
-        for unit_rate in (
-            jq.compile(
-                ".results[] | {valid_from: .valid_from, valid_to: .valid_to, value_exc_vat: .value_exc_vat, value_inc_vat: .value_inc_vat}"
-            )
-            .input(decoded_response)
-            .all()
-        )
-    ]
+    processor = jq.compile(
+        ".results[] | {valid_from: .valid_from, valid_to: .valid_to, value_exc_vat: .value_exc_vat, value_inc_vat: .value_inc_vat}"
+    )
+
+    for unit_rate in processor.input(decoded_response):
+        yield UnitRate.from_decoded_json(**unit_rate, tariff_code=tariff.code)
 
 
 if __name__ == "__main__":

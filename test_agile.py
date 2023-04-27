@@ -10,7 +10,7 @@ from agile import (
     UnitRate,
     get_tariffs,
     get_unit_rates,
-    list_products,
+    get_products,
 )
 
 
@@ -92,13 +92,13 @@ def mock_api():
         yield mock_api
 
 
-def test_list_products(mock_api):
-    products = list(list_products())
+def test_get_products(mock_api):
+    products = list(get_products())
     assert products == [Product(code="AGILE-1")]
 
 
 def test_get_tariffs(mock_api):
-    tariffs = get_tariffs(Product(code="AGILE-1"))
+    tariffs = list(get_tariffs(Product(code="AGILE-1")))
     assert tariffs == [
         Tariff(code="AGILE-1-A", product_code="AGILE-1"),
         Tariff(code="AGILE-1-B", product_code="AGILE-1"),
