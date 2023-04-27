@@ -7,6 +7,7 @@ name = "pypi"
 jq = "*"
 requests = "*"
 sqlalchemy = "*"
+alembic = "*"
 
 [dev-packages]
 black = "*"
