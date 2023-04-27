@@ -4,20 +4,9 @@ import pytest
 import responses
 from sqlalchemy import create_engine, func, select
 
-from agile import (
-    API_BASE_URL,
-    Product,
-    Tariff,
-    UnitRate,
-    get_products,
-    get_tariffs,
-    get_unit_rates,
-    metadata,
-    product_table,
-    tariff_table,
-    unit_rate_table,
-    update_all,
-)
+from agile import (API_BASE_URL, Product, Tariff, UnitRate, get_products,
+                   get_tariffs, get_unit_rates, metadata, parse_args,
+                   product_table, tariff_table, unit_rate_table, update_all)
 
 
 def mock_products_endpoint_factory(results, current_page=1, total_pages=1):
@@ -222,3 +211,35 @@ def test_update_all_is_idempotent_when_responses_are_unchanged(
 
     update_all(engine, unit_rate_from, unit_rate_to)
     make_assertions(engine)
+
+
+def test_parse_args():
+    tests = [
+        (
+            [],
+            {
+                "database_url": "sqlite:///agile.db",
+                "unit_rate_from": date.today(),
+                "unit_rate_to": (date.today() + timedelta(days=1)),
+            },
+        ),
+        (
+            ["--database-url", "sqlite:///test.db"],
+            {
+                "database_url": "sqlite:///test.db",
+                "unit_rate_from": date.today(),
+                "unit_rate_to": date.today() + timedelta(days=1),
+            },
+        ),
+        (
+            ["--unit-rate-from", "2023-01-01", "--unit-rate-to", "2023-01-31"],
+            {
+                "database_url": "sqlite:///agile.db",
+                "unit_rate_from": date(2023, 1, 1),
+                "unit_rate_to": date(2023, 1, 31),
+            },
+        ),
+    ]
+
+    for args, expected in tests:
+        assert vars(parse_args(args)) == expected

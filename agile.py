@@ -1,10 +1,11 @@
+import argparse
 import dataclasses
 import datetime as dt
 
 import jq
 import requests
 from sqlalchemy import (Column, DateTime, Float, ForeignKey, MetaData, String,
-                        Table, UniqueConstraint)
+                        Table, UniqueConstraint, create_engine)
 from sqlalchemy.dialects.sqlite import insert
 
 API_BASE_URL = "https://api.octopus.energy/v1"
@@ -152,3 +153,28 @@ def update_all(engine, unit_rate_from, unit_rate_to):
             [dataclasses.asdict(unit_rate) for unit_rate in unit_rates],
         )
         conn.commit()
+
+
+def parse_args(argv=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--database-url",
+        default="sqlite:///agile.db",
+    )
+    parser.add_argument(
+        "--unit-rate-from",
+        type=dt.date.fromisoformat,
+        default=dt.date.today(),
+    )
+    parser.add_argument(
+        "--unit-rate-to",
+        type=dt.date.fromisoformat,
+        default=dt.date.today() + dt.timedelta(days=1),
+    )
+    return parser.parse_args(argv)
+
+
+if __name__ == "__main__":
+    args = parse_args()
+    engine = create_engine(args.database_url)
+    update_all(engine, args.unit_rate_from, args.unit_rate_to)
