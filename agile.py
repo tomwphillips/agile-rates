@@ -160,16 +160,19 @@ def parse_args(argv=None):
     parser.add_argument(
         "--database-url",
         default="sqlite:///agile.db",
+        help="SQLAlchemy database URL. Defaults to %(default)s.",
     )
     parser.add_argument(
         "--unit-rate-from",
         type=dt.date.fromisoformat,
         default=dt.date.today(),
+        help="Date from which to fetch unit rates. Defaults to today.",
     )
     parser.add_argument(
         "--unit-rate-to",
         type=dt.date.fromisoformat,
         default=dt.date.today() + dt.timedelta(days=1),
+        help="Date to which to fetch unit rates. Defaults to tomorrow.",
     )
     return parser.parse_args(argv)
 
