@@ -1,10 +1,23 @@
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 
 import pytest
 import responses
+from sqlalchemy import create_engine, func, select
 
-from agile import (API_BASE_URL, Product, Tariff, UnitRate, get_products,
-                   get_tariffs, get_unit_rates)
+from agile import (
+    API_BASE_URL,
+    Product,
+    Tariff,
+    UnitRate,
+    get_products,
+    get_tariffs,
+    get_unit_rates,
+    metadata,
+    product_table,
+    tariff_table,
+    unit_rate_table,
+    update_all,
+)
 
 
 def mock_products_endpoint_factory(results, current_page=1, total_pages=1):
@@ -28,49 +41,48 @@ def mock_products_endpoint_factory(results, current_page=1, total_pages=1):
     )
 
 
-def mock_tariffs_endpoint_factory(product_code):
+def mock_tariffs_endpoint_factory(product_code, tariff_suffixes):
     return responses.Response(
         method="GET",
         url=API_BASE_URL + f"/products/{product_code}",
         json={
             "code": product_code,
             "single_register_electricity_tariffs": {
-                "_A": {"direct_debit_monthly": {"code": f"{product_code}-A"}},
-                "_B": {"direct_debit_monthly": {"code": f"{product_code}-B"}},
+                f"_{suffix}": {
+                    "direct_debit_monthly": {"code": f"{product_code}-{suffix}"}
+                }
+                for suffix in tariff_suffixes
             },
         },
     )
 
 
-def mock_unit_rates_endpoint_factory(product_code, tariff_code):
+def mock_unit_rates_endpoint_factory(product_code, tariff_code, period_from, period_to):
+    def unit_periods(start, end):
+        while start < end:
+            yield start, start + timedelta(minutes=30)
+            start += timedelta(minutes=30)
+
+    results = [
+        {
+            "value_exc_vat": 1.0,
+            "value_inc_vat": 1.0,
+            "valid_from": start.isoformat().replace("+00:00", "Z"),
+            "valid_to": end.isoformat().replace("+00:00", "Z"),
+        }
+        for start, end in unit_periods(period_from, period_to)
+    ]
+
     return responses.Response(
         method="GET",
         url=API_BASE_URL
         + f"/products/{product_code}/electricity-tariffs/{tariff_code}/standard-unit-rates/",
-        json={
-            "count": 2,
-            "next": None,
-            "previous": None,
-            "results": [
-                {
-                    "value_exc_vat": 7.78,
-                    "value_inc_vat": 8.169,
-                    "valid_from": "2023-04-10T00:00:00Z",
-                    "valid_to": "2023-04-10T00:30:00Z",
-                },
-                {
-                    "value_exc_vat": 15.84,
-                    "value_inc_vat": 16.632,
-                    "valid_from": "2023-04-10T23:30:00Z",
-                    "valid_to": "2023-04-11T00:00:00Z",
-                },
-            ],
-        },
+        json={"count": 2, "next": None, "previous": None, "results": results},
         match=[
             responses.matchers.query_param_matcher(
                 {
-                    "period_from": "2023-04-10T00:00:00Z",
-                    "period_to": "2023-04-11T00:00:00Z",
+                    "period_from": period_from.isoformat().replace("+00:00", "Z"),
+                    "period_to": period_to.isoformat().replace("+00:00", "Z"),
                 }
             )
         ],
@@ -98,7 +110,7 @@ def test_get_products_only_returns_octopus_agile_tariffs(mocked_responses):
 
 def test_get_tariffs(mocked_responses):
     mocked_responses.add(
-        mock_tariffs_endpoint_factory("AGILE-1"),
+        mock_tariffs_endpoint_factory("AGILE-1", ["A", "B"]),
     )
 
     assert list(get_tariffs(Product(code="AGILE-1"))) == [
@@ -108,34 +120,33 @@ def test_get_tariffs(mocked_responses):
 
 
 def test_get_unit_rates(mocked_responses):
+    date_from = date(2023, 4, 10)
+    date_to = date(2023, 4, 11)
+
     mocked_responses.add(
-        mock_unit_rates_endpoint_factory("AGILE-1", "AGILE-1-A"),
+        mock_unit_rates_endpoint_factory(
+            "AGILE-1",
+            "AGILE-1-A",
+            datetime.combine(date_from, time(), timezone.utc),
+            datetime.combine(date_to, time(), timezone.utc),
+        ),
     )
 
     got = list(
         get_unit_rates(
             Tariff(code="AGILE-1-A", product_code="AGILE-1"),
-            date_from=date(2023, 4, 10),
-            date_to=date(2023, 4, 11),
+            date_from,
+            date_to,
         )
     )
-    want = [
-        UnitRate(
-            valid_from=datetime(2023, 4, 10, 0, 0, tzinfo=timezone.utc),
-            valid_to=datetime(2023, 4, 10, 0, 30, tzinfo=timezone.utc),
-            value_exc_vat=7.78,
-            value_inc_vat=8.169,
-            tariff_code="AGILE-1-A",
-        ),
-        UnitRate(
-            valid_from=datetime(2023, 4, 10, 23, 30, tzinfo=timezone.utc),
-            valid_to=datetime(2023, 4, 11, 0, 0, tzinfo=timezone.utc),
-            value_exc_vat=15.84,
-            value_inc_vat=16.632,
-            tariff_code="AGILE-1-A",
-        ),
-    ]
-    assert got == want
+    assert got[0] == UnitRate(
+        valid_from=datetime.combine(date_from, time(0, 0), timezone.utc),
+        valid_to=datetime.combine(date_from, time(0, 30), timezone.utc),
+        value_exc_vat=1.0,
+        value_inc_vat=1.0,
+        tariff_code="AGILE-1-A",
+    )
+    assert len(got) == 48
 
 
 def test_get_unit_rates_fails_when_paginated(mocked_responses):
@@ -165,3 +176,49 @@ def test_get_unit_rates_fails_when_paginated(mocked_responses):
                 date_to=date.today() + timedelta(days=1),
             )
         )
+
+
+@pytest.fixture
+def engine():
+    engine = create_engine("sqlite:///:memory:")
+    metadata.create_all(engine)
+    return engine
+
+
+def test_update_all_is_idempotent_when_responses_are_unchanged(
+    mocked_responses, engine
+):
+    product_code = "AGILE-1"
+    tariff_code = "AGILE-1-A"
+    unit_rate_from = datetime.combine(datetime.today(), time(), timezone.utc)
+    unit_rate_to = unit_rate_from + timedelta(days=1)
+
+    mocked_responses.add(
+        mock_products_endpoint_factory(
+            [{"code": product_code, "brand": "OCTOPUS_ENERGY", "direction": "IMPORT"}]
+        )
+    )
+    mocked_responses.add(
+        mock_tariffs_endpoint_factory(product_code, (tariff_code[-1],))
+    )
+    mocked_responses.add(
+        mock_unit_rates_endpoint_factory(
+            product_code, tariff_code, unit_rate_from, unit_rate_to
+        )
+    )
+
+    def make_assertions(engine):
+        with engine.connect() as conn:
+            assert conn.execute(
+                select(product_table).where(product_table.c.code == product_code)
+            ).one()
+            assert conn.execute(
+                select(tariff_table).where(tariff_table.c.product_code == product_code)
+            ).one()
+            assert conn.scalar(select(func.count()).select_from(unit_rate_table)) == 48
+
+    update_all(engine, unit_rate_from, unit_rate_to)
+    make_assertions(engine)
+
+    update_all(engine, unit_rate_from, unit_rate_to)
+    make_assertions(engine)

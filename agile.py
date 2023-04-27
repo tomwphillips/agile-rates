@@ -1,53 +1,64 @@
+import dataclasses
 import datetime as dt
-from typing import List
 
 import jq
 import requests
-from sqlalchemy import ForeignKey
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy import (Column, DateTime, Float, ForeignKey, MetaData, String,
+                        Table, UniqueConstraint)
+from sqlalchemy.dialects.sqlite import insert
 
 API_BASE_URL = "https://api.octopus.energy/v1"
 
 
-class Base(DeclarativeBase):
-    pass
+metadata = MetaData()
+
+product_table = Table(
+    "products",
+    metadata,
+    Column("code", String, primary_key=True),
+)
+
+tariff_table = Table(
+    "tariffs",
+    metadata,
+    Column("code", String, primary_key=True),
+    Column("product_code", String, ForeignKey("products.code")),
+)
+
+unit_rate_table = Table(
+    "unit_rates",
+    metadata,
+    Column("tariff_code", String, ForeignKey("tariffs.code")),
+    Column("valid_from", DateTime),
+    Column("valid_to", DateTime),
+    Column("value_exc_vat", Float),
+    Column("value_inc_vat", Float),
+    UniqueConstraint(
+        "tariff_code",
+        "valid_from",
+        "valid_to",
+    ),
+)
 
 
-class Product(Base):
-    __tablename__ = "products"
-
-    code: Mapped[str] = mapped_column(primary_key=True)
-    tariffs: Mapped[List["Tariff"]] = relationship()
-
-    def __eq__(self, other):
-        return self.code == other.code and self.tariffs == other.tariffs
-
-    def __repr__(self):
-        return f"Product(code={self.code!r}, tariffs={self.tariffs!r})"
+@dataclasses.dataclass
+class Product:
+    code: str
 
 
-class Tariff(Base):
-    __tablename__ = "tariffs"
-
-    code: Mapped[str] = mapped_column(primary_key=True)
-    product_code: Mapped[str] = mapped_column(ForeignKey("products.code"))
-
-    def __eq__(self, other):
-        return self.code == other.code and self.product_code == other.product_code
-
-    def __repr__(self):
-        return f"Tariff(code={self.code!r}, product_code={self.product_code!r})"
+@dataclasses.dataclass
+class Tariff:
+    code: str
+    product_code: str
 
 
-class UnitRate(Base):
-    __tablename__ = "unit_rates"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    tariff_code: Mapped[str] = mapped_column(ForeignKey("tariffs.code"))
-    valid_from: Mapped[dt.datetime]
-    valid_to: Mapped[dt.datetime]
-    value_exc_vat: Mapped[float]
-    value_inc_vat: Mapped[float]
+@dataclasses.dataclass
+class UnitRate:
+    tariff_code: str
+    valid_from: dt.datetime
+    valid_to: dt.datetime
+    value_exc_vat: float
+    value_inc_vat: float
 
     def from_decoded_json(**kwargs):
         return UnitRate(
@@ -56,26 +67,6 @@ class UnitRate(Base):
             valid_to=dt.datetime.fromisoformat(kwargs["valid_to"]),
             value_exc_vat=kwargs["value_exc_vat"],
             value_inc_vat=kwargs["value_inc_vat"],
-        )
-
-    def __eq__(self, other):
-        return (
-            self.tariff_code == other.tariff_code
-            and self.valid_from == other.valid_from
-            and self.valid_to == other.valid_to
-            and self.value_exc_vat == other.value_exc_vat
-            and self.value_inc_vat == other.value_inc_vat
-        )
-
-    def __repr__(self):
-        return (
-            f"UnitRate("
-            f"tariff_code={self.tariff_code!r}, "
-            f"valid_from={self.valid_from!r}, "
-            f"valid_to={self.valid_to!r}, "
-            f"value_exc_vat={self.value_exc_vat!r}, "
-            f"value_inc_vat={self.value_inc_vat!r}"
-            f")"
         )
 
 
@@ -138,21 +129,26 @@ def get_unit_rates(tariff, date_from, date_to):
         yield UnitRate.from_decoded_json(**unit_rate, tariff_code=tariff.code)
 
 
-if __name__ == "__main__":
-    products = list_products()
+def update_all(engine, unit_rate_from, unit_rate_to):
+    products = list(get_products())
+    tarrifs = [tarrif for product in products for tarrif in get_tariffs(product)]
+    unit_rates = [
+        unit_rate
+        for tarrif in tarrifs
+        for unit_rate in get_unit_rates(tarrif, unit_rate_from, unit_rate_to)
+    ]
 
-    tariffs = []
-    for product in products:
-        tariffs.extend(get_tariffs(product))
-
-    for tariff in tariffs:
-        print("~~~~~~~", tariff, "~~~~~~~")
-
-        unit_rates = get_unit_rates(
-            tariff,
-            dt.date.today() + dt.timedelta(days=1),
-            dt.date.today() + dt.timedelta(days=2),
+    with engine.connect() as conn:
+        conn.execute(
+            insert(product_table).on_conflict_do_nothing(),
+            [dataclasses.asdict(product) for product in products],
         )
-
-        for unit_rate in unit_rates:
-            print(unit_rate)
+        conn.execute(
+            insert(tariff_table).on_conflict_do_nothing(),
+            [dataclasses.asdict(tariff) for tariff in tarrifs],
+        )
+        conn.execute(
+            insert(unit_rate_table).on_conflict_do_nothing(),
+            [dataclasses.asdict(unit_rate) for unit_rate in unit_rates],
+        )
+        conn.commit()
