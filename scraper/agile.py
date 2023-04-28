@@ -1,20 +1,13 @@
 import argparse
 import dataclasses
 import datetime as dt
+import time
 
 import jq
 import requests
-from sqlalchemy import (
-    Column,
-    DateTime,
-    Float,
-    ForeignKey,
-    MetaData,
-    String,
-    Table,
-    UniqueConstraint,
-    create_engine,
-)
+import schedule
+from sqlalchemy import (Column, DateTime, Float, ForeignKey, MetaData, String,
+                        Table, UniqueConstraint, create_engine)
 from sqlalchemy.dialects.sqlite import insert
 
 API_BASE_URL = "https://api.octopus.energy/v1"
@@ -139,7 +132,13 @@ def get_unit_rates(tariff, date_from, date_to):
         yield UnitRate.from_decoded_json(**unit_rate, tariff_code=tariff.code)
 
 
-def update_all(engine, unit_rate_from, unit_rate_to):
+def update_all(engine, unit_rate_from=None, unit_rate_to=None):
+    if unit_rate_from is None:
+        unit_rate_from = dt.date.today() + dt.timedelta(days=1)
+
+    if unit_rate_to is None:
+        unit_rate_to = unit_rate_from + dt.timedelta(days=1)
+
     products = list(get_products())
     tarrifs = [tarrif for product in products for tarrif in get_tariffs(product)]
     unit_rates = [
@@ -171,22 +170,36 @@ def parse_args(argv=None):
         default="sqlite:///agile.db",
         help="SQLAlchemy database URL. Defaults to %(default)s.",
     )
-    parser.add_argument(
-        "--unit-rate-from",
+    command_subparser = parser.add_subparsers(required=True)
+
+    parser_backfill = command_subparser.add_parser("backfill")
+    parser_backfill.set_defaults(command="backfill")
+    parser_backfill.add_argument(
+        "unit_rate_from",
         type=dt.date.fromisoformat,
-        default=dt.date.today(),
         help="Date from which to fetch unit rates. Defaults to today.",
     )
-    parser.add_argument(
-        "--unit-rate-to",
+    parser_backfill.add_argument(
+        "unit_rate_to",
         type=dt.date.fromisoformat,
-        default=dt.date.today() + dt.timedelta(days=1),
         help="Date to which to fetch unit rates. Defaults to tomorrow.",
     )
+
+    parser_daemon = command_subparser.add_parser("daemon")
+    parser_daemon.set_defaults(command="daemon")
+
     return parser.parse_args(argv)
 
 
 if __name__ == "__main__":
     args = parse_args()
     engine = create_engine(args.database_url)
-    update_all(engine, args.unit_rate_from, args.unit_rate_to)
+
+    if args.command == "backfill":
+        update_all(engine, args.unit_rate_from, args.unit_rate_to)
+
+    if args.command == "daemon":
+        schedule.every().day.at("18:00", "Europe/London").do(update_all)
+        while True:
+            schedule.run_pending()
+            time.sleep(1)

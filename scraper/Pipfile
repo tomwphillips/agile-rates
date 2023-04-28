@@ -8,6 +8,8 @@ jq = "*"
 requests = "*"
 sqlalchemy = "*"
 alembic = "*"
+schedule = "*"
+pytz = "*"
 
 [dev-packages]
 black = "*"
