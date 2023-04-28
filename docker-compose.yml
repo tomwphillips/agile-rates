@@ -1,0 +1,12 @@
+version: "3.7"
+
+services:
+  scraper:
+    image: ghcr.io/tomwphillips/agile-rates:main
+    command: --database-url "sqlite:///data/agile.db" daemon
+    volumes:
+      - agile_scraper_data:/home/scraper/src/data/
+
+volumes:
+  agile_scraper_data:
+    external: true
