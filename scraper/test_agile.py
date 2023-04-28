@@ -1,12 +1,25 @@
 from datetime import date, datetime, time, timedelta, timezone
+from decimal import Decimal
 
 import pytest
 import responses
 from sqlalchemy import create_engine, func, select
 
-from agile import (API_BASE_URL, Product, Tariff, UnitRate, get_products,
-                   get_tariffs, get_unit_rates, metadata, parse_args,
-                   product_table, tariff_table, unit_rate_table, update_all)
+from agile import (
+    API_BASE_URL,
+    Product,
+    Tariff,
+    UnitRate,
+    get_products,
+    get_tariffs,
+    get_unit_rates,
+    metadata,
+    parse_args,
+    product_table,
+    tariff_table,
+    unit_rate_table,
+    update_all,
+)
 
 
 def mock_products_endpoint_factory(results, current_page=1, total_pages=1):
@@ -131,8 +144,8 @@ def test_get_unit_rates(mocked_responses):
     assert got[0] == UnitRate(
         valid_from=datetime.combine(date_from, time(0, 0), timezone.utc),
         valid_to=datetime.combine(date_from, time(0, 30), timezone.utc),
-        value_exc_vat=1.0,
-        value_inc_vat=1.0,
+        value_exc_vat=Decimal("1.0"),
+        value_inc_vat=Decimal("1.0"),
         tariff_code="AGILE-1-A",
     )
     assert len(got) == 48

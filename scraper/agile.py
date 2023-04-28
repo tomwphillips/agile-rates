@@ -2,12 +2,22 @@ import argparse
 import dataclasses
 import datetime as dt
 import time
+from decimal import Decimal
 
 import jq
 import requests
 import schedule
-from sqlalchemy import (Column, DateTime, Float, ForeignKey, MetaData, String,
-                        Table, UniqueConstraint, create_engine)
+from sqlalchemy import (
+    Column,
+    DateTime,
+    ForeignKey,
+    MetaData,
+    Numeric,
+    String,
+    Table,
+    UniqueConstraint,
+    create_engine,
+)
 from sqlalchemy.dialects.sqlite import insert
 
 API_BASE_URL = "https://api.octopus.energy/v1"
@@ -34,8 +44,8 @@ unit_rate_table = Table(
     Column("tariff_code", String, ForeignKey("tariffs.code")),
     Column("valid_from", DateTime),
     Column("valid_to", DateTime),
-    Column("value_exc_vat", Float),
-    Column("value_inc_vat", Float),
+    Column("value_exc_vat", Numeric),
+    Column("value_inc_vat", Numeric),
     UniqueConstraint(
         "tariff_code",
         "valid_from",
@@ -60,16 +70,16 @@ class UnitRate:
     tariff_code: str
     valid_from: dt.datetime
     valid_to: dt.datetime
-    value_exc_vat: float
-    value_inc_vat: float
+    value_exc_vat: Decimal
+    value_inc_vat: Decimal
 
     def from_decoded_json(**kwargs):
         return UnitRate(
             tariff_code=kwargs["tariff_code"],
             valid_from=dt.datetime.fromisoformat(kwargs["valid_from"]),
             valid_to=dt.datetime.fromisoformat(kwargs["valid_to"]),
-            value_exc_vat=kwargs["value_exc_vat"],
-            value_inc_vat=kwargs["value_inc_vat"],
+            value_exc_vat=Decimal(kwargs["value_exc_vat"]),
+            value_inc_vat=Decimal(kwargs["value_inc_vat"]),
         )
 
 

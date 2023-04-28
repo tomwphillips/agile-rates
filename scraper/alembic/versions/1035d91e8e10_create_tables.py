@@ -1,8 +1,8 @@
 """Create tables
 
-Revision ID: d978d21b819c
+Revision ID: 1035d91e8e10
 Revises:
-Create Date: 2023-04-27 19:40:39.693421
+Create Date: 2023-04-28 14:49:17.671824
 
 """
 import sqlalchemy as sa
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = "d978d21b819c"
+revision = "1035d91e8e10"
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -38,8 +38,8 @@ def upgrade() -> None:
         sa.Column("tariff_code", sa.String(), nullable=True),
         sa.Column("valid_from", sa.DateTime(), nullable=True),
         sa.Column("valid_to", sa.DateTime(), nullable=True),
-        sa.Column("value_exc_vat", sa.Float(), nullable=True),
-        sa.Column("value_inc_vat", sa.Float(), nullable=True),
+        sa.Column("value_exc_vat", sa.Numeric(), nullable=True),
+        sa.Column("value_inc_vat", sa.Numeric(), nullable=True),
         sa.ForeignKeyConstraint(
             ["tariff_code"],
             ["tariffs.code"],
