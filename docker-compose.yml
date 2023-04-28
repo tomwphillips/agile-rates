@@ -6,6 +6,16 @@ services:
     command: --database-url "sqlite:///data/agile.db" daemon
     volumes:
       - agile_scraper_data:/home/scraper/src/data/
+  datasette:
+    image: datasetteproject/datasette:0.64.3
+    command: datasette -p 8001 -h 0.0.0.0 /data/agile.db
+    volumes:
+      - agile_scraper_data:/data
+  caddy:
+    image: caddy:2.6.4-alpine
+    command: caddy reverse-proxy --internal-certs --from agile.tomwphillips.co.uk --to datasette:8001
+    ports:
+      - 443:443
 
 volumes:
   agile_scraper_data:
