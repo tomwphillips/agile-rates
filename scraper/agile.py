@@ -129,6 +129,7 @@ def get_unit_rates(tariff, date_from, date_to):
             ).strftime("%Y-%m-%dT%H:%M:%SZ"),
         },
     )
+    response.raise_for_status()
     decoded_response = response.json()
 
     if decoded_response.get("next"):

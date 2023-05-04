@@ -2,6 +2,7 @@ from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
 
 import pytest
+import requests
 import responses
 from sqlalchemy import create_engine, func, select
 
@@ -171,6 +172,30 @@ def test_get_unit_rates_fails_when_paginated(mocked_responses):
     )
 
     with pytest.raises(NotImplementedError):
+        next(
+            get_unit_rates(
+                Tariff(code=tariff_code, product_code=product_code),
+                date_from=date.today(),
+                date_to=date.today() + timedelta(days=1),
+            )
+        )
+
+
+def test_get_unit_rates_fails_if_non_200_status(mocked_responses):
+    product_code = "AGILE-1"
+    tariff_code = "AGILE-1-A"
+
+    url = (
+        API_BASE_URL
+        + f"/products/{product_code}/electricity-tariffs/{tariff_code}/standard-unit-rates/"
+    )
+
+    mocked_responses.get(
+        url,
+        status=400,
+    )
+
+    with pytest.raises(requests.exceptions.HTTPError):
         next(
             get_unit_rates(
                 Tariff(code=tariff_code, product_code=product_code),
