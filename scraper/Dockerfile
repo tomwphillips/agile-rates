@@ -5,8 +5,12 @@ RUN apt-get update && apt-get -y upgrade
 RUN pip install pipenv
 ENV PIPENV_VENV_IN_PROJECT=1
 
-RUN useradd --create-home scraper && chown -R scraper /home/scraper
+# Docker always mounts the volume as root, so need to create it and change the owner
+RUN useradd --create-home scraper && \
+    mkdir -p /home/scraper/src/data/ && \
+    chown -R scraper /home/scraper
 USER scraper
+VOLUME /home/scraper/src/data/
 WORKDIR /home/scraper/src
 
 COPY --chown=user Pipfile* .
