@@ -13,7 +13,7 @@ services:
       - agile_scraper_data:/data:ro
   caddy:
     image: caddy:2.6.4-alpine
-    command: caddy reverse-proxy --internal-certs --from agile.tomwphillips.co.uk --to datasette:8001
+    command: caddy reverse-proxy --from agile.tomwphillips.co.uk --to datasette:8001
     ports:
       - 443:443
 
