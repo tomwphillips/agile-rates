@@ -10,7 +10,7 @@ services:
     image: datasetteproject/datasette:0.64.3
     command: datasette -p 8001 -h 0.0.0.0 /data/agile.db
     volumes:
-      - agile_scraper_data:/data
+      - agile_scraper_data:/data:ro
   caddy:
     image: caddy:2.6.4-alpine
     command: caddy reverse-proxy --internal-certs --from agile.tomwphillips.co.uk --to datasette:8001
