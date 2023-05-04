@@ -210,7 +210,7 @@ if __name__ == "__main__":
         update_all(engine, args.unit_rate_from, args.unit_rate_to)
 
     if args.command == "daemon":
-        schedule.every().day.at("18:00", "Europe/London").do(update_all)
+        schedule.every().day.at("18:00", "Europe/London").do(update_all, engine)
         while True:
             schedule.run_pending()
             time.sleep(1)
