@@ -4,9 +4,9 @@ databases:
       latest_rates:
         params:
           - days
+          - grid_supply_point_id
         sql: |-
           select
-            group_id as region_id,
             group_description as region,
             valid_from,
             value_inc_vat
@@ -21,6 +21,7 @@ databases:
               from
                 unit_rates
                 join grid_supply_points on substr(unit_rates.tariff_code, -1) = grid_supply_points.group_id
+                  and grid_supply_points.group_id = :grid_supply_point_id
             )
           where day_sequence_number <= cast(:days as integer)
-          order by valid_from, region_id
+          order by valid_from, region
