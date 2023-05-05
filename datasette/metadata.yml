@@ -25,3 +25,6 @@ databases:
             )
           where day_sequence_number <= cast(:days as integer)
           order by valid_from, region
+    tables:
+      alembic_version:
+        hidden: true
