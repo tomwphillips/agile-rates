@@ -1,4 +1,4 @@
-name: Scraper
+name: Datasette
 on:
   push:
     branches:
@@ -6,7 +6,7 @@ on:
   pull_request:
 
 jobs:
-  build-test-push:
+  build-push:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -26,25 +26,13 @@ jobs:
         id: meta
         uses: docker/metadata-action@v4.4.0
         with:
-          images: ghcr.io/${{ github.repository }}-scraper
+          images: ghcr.io/${{ github.repository }}-datasette
 
-      - name: Build Docker test image
-        uses: docker/build-push-action@v4.0.0
-        with:
-          context: "{{defaultContext}}:scraper" # switch to scraper/ subdir
-          target: tests
-          load: true
-          tags: tests
-
-      - name: Run tests
-        run: docker run --rm tests
-
-      - name: Build and push Docker app image
+      - name: Build and push Docker image
         if: github.ref == 'refs/heads/main'
         uses: docker/build-push-action@v4.0.0
         with:
-          context: "{{defaultContext}}:scraper" # switch to scraper/ subdir
-          target: app
+          context: "{{defaultContext}}:datasette" # switch to datasette/ subdir
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}

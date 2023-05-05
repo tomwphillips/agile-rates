@@ -2,13 +2,13 @@ version: "3.7"
 
 services:
   scraper:
-    image: ghcr.io/tomwphillips/agile-rates:main
+    image: ghcr.io/tomwphillips/agile-rates-scraper:main
     command: --database-url "sqlite:///data/agile.db" daemon
     volumes:
       - agile_scraper_data:/home/scraper/src/data/
   datasette:
-    image: datasetteproject/datasette:0.64.3
-    command: datasette -i --cors -p 8001 -h 0.0.0.0 /data/agile.db
+    image: ghcr.io/tomwphillips/agile-rates-datasette:main
+    command: --cors -p 8001 -h 0.0.0.0 -m metadata.yml -i /data/agile.db
     volumes:
       - agile_scraper_data:/data:ro
   caddy:

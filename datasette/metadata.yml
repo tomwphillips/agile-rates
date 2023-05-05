@@ -1,0 +1,26 @@
+databases:
+  agile:
+    queries:
+      latest_rates:
+        params:
+          - days
+        sql: |-
+          select
+            group_id as region_id,
+            group_description as region,
+            valid_from,
+            value_inc_vat
+          from
+            (
+              select
+                *,
+                dense_rank() over (
+                  order by
+                    date(valid_from, 'start of day') desc
+                ) as day_sequence_number
+              from
+                unit_rates
+                join grid_supply_points on substr(unit_rates.tariff_code, -1) = grid_supply_points.group_id
+            )
+          where day_sequence_number <= cast(:days as integer)
+          order by valid_from, region_id
