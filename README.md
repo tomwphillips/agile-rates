@@ -1,6 +1,15 @@
 # agile-rates
 
-An experiment with [jq.py](https://github.com/mwilliamson/jq.py), [Datasette](https://datasette.io/) and [Observable](https://observablehq.com/).
+An experiment with [jq.py](https://github.com/mwilliamson/jq.py), [Datasette](https://datasette.io/) and [Observable](https://observablehq.com/) to get Octopus Energy's Agile electricity prices.
+
+On [Agile Octopus](https://octopus.energy/agile/) electricity prices change every half hour.
+Every day around 5 pm, Octopus publish the prices for the following day.
+This scrapes those prices and stores them in a SQLite database, which you can [query using Datasette](https://agile.tomwphillips.co.uk/).
+Datasette provides a quick and easy API, which [Observable queries to generate plots](https://observablehq.com/@tomwphillips/octopus-agile-rates).
+
+Agile is interesting for lots of reasons. But mostly simply I think most people can save money by switching and making minor changes to their habits. [Money Saving Expert explains in more detail](https://www.moneysavingexpert.com/news/2023/02/wholesale-energy-prices-are-falling---is-it-worth-switching-to-o/).
+
+[Sign up with my referral link](https://share.octopus.energy/tan-tiger-133) and we both get £50 credit.
 
 ## Deploy
 
