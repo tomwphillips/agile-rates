@@ -1,5 +1,11 @@
 databases:
   agile:
+    title: Octopus Energy Agile Rates
+    description: Half-hourly electricty rates (p/kWh) for Octopus Energy's Agile tariff.
+    about: Github
+    about_url: https://github.com/tomwphillips/agile-rates/
+    source: Octopus Energy API
+    source_url: https://developer.octopus.energy/docs/api/
     queries:
       latest_rates:
         params:
@@ -28,3 +34,7 @@ databases:
     tables:
       alembic_version:
         hidden: true
+      unit_rates:
+        units:
+          value_exc_vat: "p/kWh"
+          value_inc_vat: "p/kWh"
