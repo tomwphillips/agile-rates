@@ -1,8 +1,12 @@
 # agile-rates
 
-Experiments with small data.
+An experiment with [jq.py](https://github.com/mwilliamson/jq.py), [Datasette](https://datasette.io/) and [Observable](https://observablehq.com/).
 
 ## Deploy
+
+Deployed on a Digital Ocean droplet. Set up Ubuntu, install Docker and configure key-based SSH authentication.
+
+Use SSH to connect to the Docker daemon on the droplet:
 
 ```
 cd path/to/agile-rates
