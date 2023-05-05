@@ -53,6 +53,14 @@ unit_rate_table = Table(
     ),
 )
 
+grid_supply_point_table = Table(
+    "grid_supply_points",
+    metadata,
+    Column("group_id", String, primary_key=True),
+    Column("group_description", String),
+    UniqueConstraint("group_id", "group_description"),
+)
+
 
 @dataclasses.dataclass
 class Product:
