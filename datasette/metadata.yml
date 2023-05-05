@@ -36,7 +36,3 @@ databases:
     tables:
       alembic_version:
         hidden: true
-      unit_rates:
-        units:
-          value_exc_vat: "p/kWh"
-          value_inc_vat: "p/kWh"
