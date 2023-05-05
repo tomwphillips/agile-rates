@@ -8,7 +8,7 @@ services:
       - agile_scraper_data:/home/scraper/src/data/
   datasette:
     image: datasetteproject/datasette:0.64.3
-    command: datasette -p 8001 -h 0.0.0.0 /data/agile.db
+    command: datasette --cors -p 8001 -h 0.0.0.0 /data/agile.db
     volumes:
       - agile_scraper_data:/data:ro
   caddy:
