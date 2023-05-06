@@ -2,6 +2,7 @@ title: Octopus Energy Agile Rates
 description_html: |-
   <p>Half-hourly electricty rates (p/kWh) for Octopus Energy's Agile tariff.</p>
   <p><a href="https://observablehq.com/@tomwphillips/octopus-agile-rates">See plots on Observable.</a></p>
+  <p>Rates are updated daily at 18:00 (UTC+1).</p>
 about: Github
 about_url: https://github.com/tomwphillips/agile-rates/
 source: Octopus Energy API
